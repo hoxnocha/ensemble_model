@@ -23,7 +23,7 @@ class EfficientNetModule(LightningModule):
                  in_features = self.model._fc.in_features
                  #self.model._fc = torch.nn.Linear(in_features, 1)
                  # = torch.tensor([1.0, 30.0])
-                 self.criterion = torch.nn.BCEWithLogitsLoss(pos_weight=torch.tensor(30))
+                 self.criterion = torch.nn.BCEWithLogitsLoss()
         #layers = list(backbone.children())[:-2]
         #self.feature_extractor = torch.nn.Sequential(*layers)
                  self.model._fc= torch.nn.Sequential(
