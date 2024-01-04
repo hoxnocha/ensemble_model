@@ -4,33 +4,34 @@ from pytorch_lightning import LightningModule
 from torchmetrics import MeanMetric, MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
 from torchmetrics.classification import BinaryF1Score
-
+from collections import OrderedDict
 import torch.nn.functional as F
-from torchvision.models import swin_b
+from torchvision.models import efficientnet_v2_m
 from new_ensemble_model.ensemble_model.utils.Focal_Loss import FocalLoss
 
-class SwinTransformerModule(LightningModule):
+class EfficientNetV2Module(LightningModule):
     def __init__(self,
                  
         ):
                  super().__init__()
-        
-                 self.model = swin_b(pretrained=True)
-                 for param in self.model.parameters():
-                            param.requires_grad = False
-                            
-                 self.model.head = torch.nn.Sequential(
-                     torch.nn.Linear(1024, 512),
-                     torch.nn.Dropout(0.4),
-                     torch.nn.Linear(512, 1),
-                 )
                  
-
-
+                 
+                 self.model = efficientnet_v2_m(pretrained=True)
+                 for param in self.model.parameters():
+                     param.requires_grad = False
+                
+                 self.model.classifier = torch.nn.Sequential()
+                 self.model.classifier.add_module("fc1", torch.nn.Linear(1280, 500,bias=True))
+                 self.model.classifier.add_module("dropout1", torch.nn.Dropout(p=0.4, inplace=True))
+                 self.model.classifier.add_module("fc2", torch.nn.Linear(500, 1,bias=True))
+                 
                  self.criterion = FocalLoss()
        
         
                  self.f1_score = BinaryF1Score()
+
+                 
+                 
                  
     def forward(self, x) -> torch.Tensor:
         x = self.model(x)
@@ -39,7 +40,6 @@ class SwinTransformerModule(LightningModule):
         return x
         
         
-
     
     def model_step(self, batch: Any):
         x, y = batch
@@ -57,7 +57,8 @@ class SwinTransformerModule(LightningModule):
         loss, preds, targets = self.model_step(batch)
         print(loss, preds, targets)
 
-        
+        # update and log metrics
+       
         self.f1_score(preds, targets)
         self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/f1", self.f1_score(preds, targets), on_step=False, on_epoch=True, prog_bar=True)
@@ -83,7 +84,8 @@ class SwinTransformerModule(LightningModule):
         _, y = batch
         loss, preds, targets = self.model_step(batch)
 
-       
+        # update and log metrics
+        
         f1_score = self.f1_score(preds, targets)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         
@@ -101,6 +103,8 @@ class SwinTransformerModule(LightningModule):
         
         print(preds, targets)
 
+        # update and log metrics
+        
         self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         
 

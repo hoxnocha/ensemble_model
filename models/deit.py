@@ -4,33 +4,28 @@ from pytorch_lightning import LightningModule
 from torchmetrics import MeanMetric, MaxMetric
 from torchmetrics.classification.accuracy import Accuracy
 from torchmetrics.classification import BinaryF1Score
-
+import timm
 import torch.nn.functional as F
-from torchvision.models import swin_b
 from new_ensemble_model.ensemble_model.utils.Focal_Loss import FocalLoss
 
-class SwinTransformerModule(LightningModule):
+class DeiTModule(LightningModule):
     def __init__(self,
                  
         ):
-                 super().__init__()
+                super().__init__()
         
-                 self.model = swin_b(pretrained=True)
-                 for param in self.model.parameters():
-                            param.requires_grad = False
-                            
-                 self.model.head = torch.nn.Sequential(
-                     torch.nn.Linear(1024, 512),
-                     torch.nn.Dropout(0.4),
-                     torch.nn.Linear(512, 1),
-                 )
-                 
+                self.model = timm.create_model('deit_tiny_distilled_patch16_224', pretrained=True)
+                for param in self.model.parameters():
+                        param.requires_grad = False
 
-
-                 self.criterion = FocalLoss()
-       
-        
-                 self.f1_score = BinaryF1Score()
+                self.model.head_dist = torch.nn.Sequential(
+                    torch.nn.Linear(self.model.head_dist.in_features, 500),
+                    torch.nn.Dropout(p=0.4, inplace=False),
+                    torch.nn.Linear(500, 1),
+                )
+                
+                self.criterion = FocalLoss()
+                self.f1_score = BinaryF1Score()
                  
     def forward(self, x) -> torch.Tensor:
         x = self.model(x)
@@ -38,8 +33,6 @@ class SwinTransformerModule(LightningModule):
         x = outlayer(x)
         return x
         
-        
-
     
     def model_step(self, batch: Any):
         x, y = batch
@@ -83,7 +76,7 @@ class SwinTransformerModule(LightningModule):
         _, y = batch
         loss, preds, targets = self.model_step(batch)
 
-       
+        
         f1_score = self.f1_score(preds, targets)
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         
@@ -101,6 +94,8 @@ class SwinTransformerModule(LightningModule):
         
         print(preds, targets)
 
+        # update and log metrics
+        
         self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         
 

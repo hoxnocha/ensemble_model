@@ -10,7 +10,6 @@ from torch.utils.data import Dataset
 import os
 import glob
 from torchvision import transforms as T
-from airogs_basemodel.data.airogs_label import LABEL_DICT
 from random import sample
 
 class AirogsDataset(Dataset):
@@ -18,38 +17,51 @@ class AirogsDataset(Dataset):
 
     def __init__(self, 
                  task, 
-                 image_folder_path, 
-                 rg_folder_path, 
+                 image_folder_path,
                  image_csv_path, 
-                 rg_csv_path) -> None:
+                 transform 
+            ) -> None:
         super().__init__()
         self.task = task
-        self.image_folder_path = image_folder_path
-        self.df = pd.read_csv(image_csv_path)
-        files = glob.glob1(self.image_folder_path, '*.jpg')
-        files = [os.path.basename(file)[:-4] for file in files]
-        self.df = self.df[self.df['challenge_id'].isin(files)]
-        self.df = self.df[self.df['class'] == 'NRG']
-        self.df = self.df.sample(n=3270)
-        self.df["challenge_id"] = f"{image_folder_path}" + "/" + self.df['challenge_id'] + '.jpg'
+        self.cat0_path = image_folder_path + "/cat0/crops/od"
+        self.cat1_path = image_folder_path + "/cat1/crops/od"
+        self.cat2_path = image_folder_path + "/cat2/crops/od"
+        self.cat3_path = image_folder_path + "/cat3/crops/od"
+        self.cat4_path = image_folder_path + "/cat4/crops/od"
+        self.cat5_path = image_folder_path + "/cat5/crops/od"
         
-
-        self.rg_folder_path = rg_folder_path
-        self.rg_file = pd.read_csv(rg_csv_path)
-        self.rg_file["challenge_id"] = f"{self.rg_folder_path}" + "/" + self.rg_file['challenge_id'] 
-        self.df = pd.concat([self.df, self.rg_file])
-
+        self.df = pd.read_csv(image_csv_path)
+        files0 = glob.glob1(self.cat0_path, '*.jpg')
+        files0 = [os.path.basename(file)[:-4] for file in files0]
+        self.df0 = self.df[self.df['challenge_id'].isin(files0)]
+        self.df0["challenge_id"] = f"{self.cat0_path}" + "/" + self.df['challenge_id'] + '.jpg'
+        files1 = glob.glob1(self.cat1_path, '*.jpg')
+        files1 = [os.path.basename(file)[:-4] for file in files1]
+        self.df1 = self.df[self.df['challenge_id'].isin(files1)] 
+        self.df1["challenge_id"] = f"{self.cat1_path}" + "/" + self.df['challenge_id'] + '.jpg'
+        files2 = glob.glob1(self.cat2_path, '*.jpg')
+        files2 = [os.path.basename(file)[:-4] for file in files2]
+        self.df2 = self.df[self.df['challenge_id'].isin(files2)]
+        self.df2["challenge_id"] = f"{self.cat2_path}" + "/" + self.df['challenge_id'] + '.jpg'
+        files3 = glob.glob1(self.cat3_path, '*.jpg')
+        files3 = [os.path.basename(file)[:-4] for file in files3]
+        self.df3 = self.df[self.df['challenge_id'].isin(files3)]
+        self.df3["challenge_id"] = f"{self.cat3_path}" + "/" + self.df['challenge_id'] + '.jpg'
+        files4 = glob.glob1(self.cat4_path, '*.jpg')
+        files4 = [os.path.basename(file)[:-4] for file in files4]
+        self.df4 = self.df[self.df['challenge_id'].isin(files4)]
+        self.df4["challenge_id"] = f"{self.cat4_path}" + "/" + self.df['challenge_id'] + '.jpg'
+        files5 = glob.glob1(self.cat5_path, '*.jpg')
+        files5 = [os.path.basename(file)[:-4] for file in files5]
+        self.df5 = self.df[self.df['challenge_id'].isin(files5)]
+        self.df5["challenge_id"] = f"{self.cat5_path}" + "/" + self.df['challenge_id'] + '.jpg'
+       
+        self.df = pd.concat([self.df0, self.df1, self.df2, self.df3, self.df4, self.df5])
+        
         label_mapping = {"NRG": 0, "RG":1 }
         self.df['class'] = self.df['class'].map(label_mapping)
-        self.transform =  T.Compose([
-            T.ToPILImage(),
-            T.Resize(384, interpolation=Image.BICUBIC),
-            T.CenterCrop(380),
-            T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
-            
-            
+        
+        self.transform = transform    
         
         
 
@@ -59,17 +71,11 @@ class AirogsDataset(Dataset):
     
     def __getitem__(self, index: int) -> tuple[Any, Any]:
 
-        #get image path
-        #image_path = f"{self.image_folder_path}" + "/" + self.df.iloc[index]['challenge_id'] + '.jpg'
-        #image_path = Path(image_path)
         image_path = self.df.iloc[index]['challenge_id']
 
         image = cv2.imread(str(image_path))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        h, s, v = cv2.split(image)
-        v_equlized = cv2.equalizeHist(v)
-        #import ipdb; ipdb.set_trace()
-        image = cv2.merge((h, s, v_equlized))
+        image = cv2.equalizeHist(image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = self.transform(image)
         label = self.df.iloc[index]['class']
         label = torch.tensor(label)

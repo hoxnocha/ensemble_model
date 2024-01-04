@@ -8,39 +8,35 @@ from efficientnet_pytorch import EfficientNet
 from collections import OrderedDict
 import torch.nn.functional as F
 
-#from transformers import EfficientNetImageProcessor, EfficientNetForImageClassification
+from new_ensemble_model.ensemble_model.utils.Focal_Loss import FocalLoss
 
-class EfficientNetModule(LightningModule):
+class EfficientNetB4Module(LightningModule):
     def __init__(self,
-                 #optimizer: torch.optim.Optimizer, 
-                 #scheduler: torch.optim.lr_scheduler 
+                 
         ):
-                 super().__init__()
-                 self.save_hyperparameters()
+                super().__init__()
+               
         
-                 self.model = EfficientNet.from_pretrained('efficientnet-b4')
+                self.model = EfficientNet.from_pretrained('efficientnet-b4')
          
-                 in_features = self.model._fc.in_features
-                 #self.model._fc = torch.nn.Linear(in_features, 1)
-                 # = torch.tensor([1.0, 30.0])
-                 self.criterion = torch.nn.BCEWithLogitsLoss()
-        #layers = list(backbone.children())[:-2]
-        #self.feature_extractor = torch.nn.Sequential(*layers)
-                 self.model._fc= torch.nn.Sequential(
-                  torch.nn.Linear(in_features, 128),
+                in_features = self.model._fc.in_features
+                
+                for param in self.model.parameters():
+                    param.requires_grad = False
+               
+        
+                self.model._fc= torch.nn.Sequential(
+                  torch.nn.Linear(in_features, 500),
                   torch.nn.ReLU(),
                   torch.nn.Dropout(p=0.4, inplace=False),
-                  torch.nn.Linear(128, 1),
+                  torch.nn.Linear(500, 1),
                 )
-        #self.classifier = torch.nn.Linear(in_features, 2)
-                 #self.train_acc = Accuracy(task='binary', num_classes=1)
-                 #self.val_acc = Accuracy(task='binary', num_classes=1)
-                 #self.test_acc = Accuracy(task='binary', num_classes=1)
-                 self.f1_score = BinaryF1Score()
 
-                 self.train_loss = MeanMetric()
-                 self.val_loss = MeanMetric()
-                 self.test_loss = MeanMetric()
+                self.criterion = FocalLoss()
+        
+                self.f1_score = BinaryF1Score()
+
+                
                  
                  
                  
@@ -49,13 +45,7 @@ class EfficientNetModule(LightningModule):
         outlayer = torch.nn.Sigmoid()
         x = outlayer(x)
         return x
-        
-    def on_train_start(self) -> None:
-         # by default lightning executes validation step sanity checks before training starts,
-        # so it's worth to make sure validation metrics don't store results from these checks
-        self.val_loss.reset()
-        #self.val_acc.reset()
-        #self.val_acc_best.reset()
+    
 
     
 
@@ -76,11 +66,10 @@ class EfficientNetModule(LightningModule):
         loss, preds, targets = self.model_step(batch)
         print(loss, preds, targets)
 
-        # update and log metrics
-        self.train_loss(loss)
+       
         self.f1_score(preds, targets)
-        self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        #self.log("train/acc", self.train_acc, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        
         self.log("train/f1", self.f1_score(preds, targets), on_step=False, on_epoch=True, prog_bar=True)
 
         # we can return here dict with any tensors
@@ -104,10 +93,9 @@ class EfficientNetModule(LightningModule):
         _, y = batch
         loss, preds, targets = self.model_step(batch)
 
-        # update and log metrics
-        self.val_loss(loss)
+        
         f1_score = self.f1_score(preds, targets)
-        self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         
         self.log("val/f1", f1_score, on_step=False, on_epoch=True, prog_bar=True)
         return {"loss": loss, "preds": preds, "targets": y,
@@ -123,11 +111,9 @@ class EfficientNetModule(LightningModule):
         
         print(preds, targets)
 
-        # update and log metrics
-        self.test_loss(loss)
-        #self.test_acc(preds, targets)
-        self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
-        #self.log("test/acc", self.test_acc, on_step=False, on_epoch=True, prog_bar=True)
+      
+        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        
 
         return {"loss": loss, "preds": preds, "targets": targets}
 
@@ -135,11 +121,8 @@ class EfficientNetModule(LightningModule):
         pass
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+        return torch.optim.Adam(self.parameters(), lr=1e-4)
 
 
-#if __name__ == "__main__":
- #   import pdb; pdb.set_trace()
-  #  model = EfficientNetModule()
-   # print("end")
+
 

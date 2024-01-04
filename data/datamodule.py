@@ -8,21 +8,24 @@ import torch
 
 class AirogsDataModule(pl.LightningDataModule):
     def __init__(self, 
-                 #task, 
+                 
                  image_folder_path, 
-                 rg_folder_path, 
+                 
                  image_csv_path, 
-                 rg_csv_path, 
+                
+                 transform,
                  train_batch_size, 
                  test_batch_size, 
                  num_workers, 
                  pin_memory: bool = True) -> None:
+        
         super().__init__()
-        #self.task = task
+        
         self.image_folder_path = image_folder_path
-        self.rg_folder_path = rg_folder_path
+        
         self.image_csv_path = image_csv_path
-        self.rg_csv_path = rg_csv_path
+        
+        self.transform = transform
         self.train_batch_size = train_batch_size
         self.test_batch_size = test_batch_size
         self.num_workers = num_workers
@@ -39,18 +42,20 @@ class AirogsDataModule(pl.LightningDataModule):
         if stage == "fit" or stage is None:
             airogs_full = AirogsDataset(task="classification", 
                                         image_folder_path=self.image_folder_path, 
-                                        rg_folder_path=self.rg_folder_path, 
+                                        
                                         image_csv_path=self.image_csv_path, 
-                                        rg_csv_path=self.rg_csv_path)
+                                      
+                                        transform=self.transform)
             train_size = int(0.8 * len(airogs_full))
             val_size = len(airogs_full) - train_size
             self.train_dataset, self.val_dataset = torch.utils.data.random_split(airogs_full, [train_size, val_size])
         if stage == "test" or stage is None:
             self.test_dataset = AirogsDataset(task="classification", 
                                               image_folder_path=self.image_folder_path, 
-                                              rg_folder_path=self.rg_folder_path, 
+                                              
                                               image_csv_path=self.image_csv_path, 
-                                              rg_csv_path=self.rg_csv_path)
+                                              
+                                              transform=self.transform)
 
     def train_dataloader(self) -> TRAIN_DATALOADERS:
         """Get the train dataloader.

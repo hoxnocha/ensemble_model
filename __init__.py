@@ -1,7 +1,7 @@
-from ensemble_model import data
-from ensemble_model import models
+from new_ensemble_model.ensemble_model import data, models, utils
 
 __all__ = [
     "data",
     "models",
+    "utils",
 ]
