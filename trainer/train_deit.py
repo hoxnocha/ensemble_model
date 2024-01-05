@@ -1,12 +1,12 @@
 import sys
-sys.path.append('/work/scratch/tyang/new_ensemble_model')
+sys.path.append('/work/scratch/tyang')
 
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.callbacks import ModelCheckpoint
 import torchvision.transforms as T
 from PIL import Image
 from pytorch_lightning.loggers import logger
-from pytorch_lightning.callbacks import Callback
+from pytorch_lightning.callbacks import Callback, RichProgressBar
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 
 from new_ensemble_model.ensemble_model.models.deit import DeiTModule
@@ -27,8 +27,8 @@ datamodule = AirogsDataModule(image_folder_path="/work/scratch/tyang/yolov5resul
                                     
                                 
                                 ]),
-                              train_batch_size=32, 
-                              test_batch_size=32, 
+                              train_batch_size=2048, 
+                              test_batch_size=2048, 
                               num_workers=8)
 
 
@@ -53,7 +53,7 @@ checkpoint_callback = ModelCheckpoint(
 trainer = Trainer(
     max_epochs=300,
     gpus=1,
-    callbacks=[early_stopping_callback, checkpoint_callback],
+    callbacks=[RichProgressBar(refresh_rate=50), early_stopping_callback, checkpoint_callback],
 )
 
 trainer.fit(model, datamodule)

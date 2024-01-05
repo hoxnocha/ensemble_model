@@ -55,7 +55,7 @@ class EfficientNetV2Module(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
-        print(loss, preds, targets)
+    
 
         # update and log metrics
        

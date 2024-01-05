@@ -1,6 +1,6 @@
 from pandas import DataFrame
 import pytorch_lightning as pl
-from ensemble_model.data.dataset import AirogsDataset
+from new_ensemble_model.ensemble_model.data.dataset import AirogsDataset
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
 from torch.utils.data.dataloader import DataLoader
 from pathlib import Path

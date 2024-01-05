@@ -74,8 +74,11 @@ class AirogsDataset(Dataset):
         image_path = self.df.iloc[index]['challenge_id']
 
         image = cv2.imread(str(image_path))
-        image = cv2.equalizeHist(image)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(image)
+        v_eq = cv2.equalizeHist(v)
+        image = cv2.merge((h, s, v_eq))
+        image = cv2.cvtColor(image, cv2.COLOR_HSV2RGB)
         image = self.transform(image)
         label = self.df.iloc[index]['class']
         label = torch.tensor(label)

@@ -17,11 +17,11 @@ class DeiTModule(LightningModule):
                 self.model = timm.create_model('deit_tiny_distilled_patch16_224', pretrained=True)
                 for param in self.model.parameters():
                         param.requires_grad = False
-
+                self.model.head = torch.nn.Linear(self.model.head.in_features, 1)
                 self.model.head_dist = torch.nn.Sequential(
-                    torch.nn.Linear(self.model.head_dist.in_features, 500),
+                    torch.nn.Linear(self.model.head_dist.in_features, 96),
                     torch.nn.Dropout(p=0.4, inplace=False),
-                    torch.nn.Linear(500, 1),
+                    torch.nn.Linear(96, 1),
                 )
                 
                 self.criterion = FocalLoss()
@@ -48,7 +48,7 @@ class DeiTModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
-        print(loss, preds, targets)
+        #print(loss, preds, targets)
 
         
         self.f1_score(preds, targets)
