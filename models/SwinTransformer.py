@@ -20,9 +20,9 @@ class SwinTransformerModule(LightningModule):
                             param.requires_grad = False
                             
                  self.model.head = torch.nn.Sequential(
-                     torch.nn.Linear(1024, 512),
-                     torch.nn.Dropout(0.4),
-                     torch.nn.Linear(512, 1),
+                     
+                     torch.nn.Dropout(0.7),
+                     torch.nn.Linear(1024, 1),
                  )
                  
 
@@ -55,7 +55,6 @@ class SwinTransformerModule(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
-        #print(loss, preds, targets)
 
         
         self.f1_score(preds, targets)
@@ -88,8 +87,7 @@ class SwinTransformerModule(LightningModule):
         self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         
         self.log("val/f1", f1_score, on_step=False, on_epoch=True, prog_bar=True)
-        return {"loss": loss, "preds": preds, "targets": y,
-                "f1": f1_score}
+        return {"loss": loss, "preds": preds, "targets": y, "f1": f1_score}
 
     def validation_epoch_end(self, outputs: List[Any]):
         f1_score = torch.stack([x["f1"] for x in outputs]).mean()
@@ -98,8 +96,6 @@ class SwinTransformerModule(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
-        
-        print(preds, targets)
 
         self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
         

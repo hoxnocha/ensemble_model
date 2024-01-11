@@ -1,11 +1,8 @@
-from new_ensemble_model.ensemble_model.models.EffientNetB4 import EfficientNetB4Module
-from new_ensemble_model.ensemble_model.models.EfficientNetV2 import EfficientNetV2Module
-from new_ensemble_model.ensemble_model.models.SwinTransformer import SwinTransformerModule
-from new_ensemble_model.ensemble_model.models.deit import DeiTModule
+from .deit import DeiTModule
+from .EffientNetB4 import EfficientNetB4Module
 
 __all__ = [
+    'DeiTModule',
     'EfficientNetB4Module',
-    'EfficientNetV2Module',
-    'SwinTransformerModule',
-    'DeiTModule'
+    
 ]

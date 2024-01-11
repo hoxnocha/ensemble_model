@@ -1,17 +1,24 @@
 from typing import Any, Dict, List, Optional
 import torch
+import torch.nn as nn
 from pytorch_lightning import LightningModule
-from torchmetrics import MeanMetric, MaxMetric
-from torchmetrics.classification.accuracy import Accuracy
 from torchmetrics.classification import BinaryF1Score
 from efficientnet_pytorch import EfficientNet
 from collections import OrderedDict
 import torch.nn.functional as F
-
-from new_ensemble_model.ensemble_model.utils.Focal_Loss import FocalLoss
+from argparse import ArgumentParser
+import argparse
+from ..utils.Focal_Loss import FocalLoss
+from torch.optim import AdamW
+import torch.optim.lr_scheduler as lrs
 
 class EfficientNetB4Module(LightningModule):
     def __init__(self,
+                freeze,
+                dropout,
+                learning_rate,
+                weight_decay,
+                **kwargs,
                  
         ):
                 super().__init__()
@@ -21,23 +28,38 @@ class EfficientNetB4Module(LightningModule):
          
                 in_features = self.model._fc.in_features
                 
-                for param in self.model.parameters():
-                    param.requires_grad = False
+                if freeze:
+                    for param in self.model.parameters():
+                       param.requires_grad = False
                
         
-                self.model._fc= torch.nn.Sequential(
-                  torch.nn.Linear(in_features, 500),
-                  torch.nn.ReLU(),
-                  torch.nn.Dropout(p=0.4, inplace=False),
-                  torch.nn.Linear(500, 1),
+                self.model._fc= nn.Sequential(
+                  nn.Dropout(p=dropout, inplace=False),
+                  nn.Linear(in_features, 512),
+                  nn.ReLU(inplace=True),
+                  
+                  nn.Linear(512, 128),
+                  nn.ReLU(inplace=True),
+                  
+                  nn.Linear(128, 1),
+                  
                 )
 
                 self.criterion = FocalLoss()
         
                 self.f1_score = BinaryF1Score()
 
-                
-                 
+                self.AdamW = AdamW(self.parameters(), lr=learning_rate, weight_decay=weight_decay)
+   
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser.add_argument_group("EfficientNetB4Module")
+        parser.add_argument("--freeze", type=bool, default=True)
+        parser.add_argument("--dropout", type=int, default=0.2)
+        parser.add_argument("--learning_rate", type=float, default=3e-4)
+        parser.add_argument("--weight_decay", type=float, default=1e-3)
+        return parent_parser
+           
                  
                  
     def forward(self, x) -> torch.Tensor:
@@ -45,8 +67,6 @@ class EfficientNetB4Module(LightningModule):
         outlayer = torch.nn.Sigmoid()
         x = outlayer(x)
         return x
-    
-
     
 
     
@@ -64,7 +84,7 @@ class EfficientNetB4Module(LightningModule):
 
     def training_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
-        #print(loss, preds, targets)
+       
 
        
         self.f1_score(preds, targets)
@@ -108,8 +128,6 @@ class EfficientNetB4Module(LightningModule):
 
     def test_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
-        
-        print(preds, targets)
 
       
         self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
@@ -121,7 +139,9 @@ class EfficientNetB4Module(LightningModule):
         pass
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-4)
+        scheduler = lrs.CosineAnnealingLR(self.AdamW, T_max=10, eta_min=1e-6,)
+        return [self.AdamW], [scheduler]
+        
 
 
 

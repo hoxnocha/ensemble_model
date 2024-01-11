@@ -21,9 +21,9 @@ class EfficientNetV2Module(LightningModule):
                      param.requires_grad = False
                 
                  self.model.classifier = torch.nn.Sequential()
-                 self.model.classifier.add_module("fc1", torch.nn.Linear(1280, 500,bias=True))
-                 self.model.classifier.add_module("dropout1", torch.nn.Dropout(p=0.4, inplace=True))
-                 self.model.classifier.add_module("fc2", torch.nn.Linear(500, 1,bias=True))
+                
+                 self.model.classifier.add_module("dropout1", torch.nn.Dropout(p=0.7, inplace=True))
+                 self.model.classifier.add_module("fc1", torch.nn.Linear(1280, 1,bias=True))
                  
                  self.criterion = FocalLoss()
        
@@ -101,7 +101,6 @@ class EfficientNetV2Module(LightningModule):
     def test_step(self, batch: Any, batch_idx: int):
         loss, preds, targets = self.model_step(batch)
         
-        print(preds, targets)
 
         # update and log metrics
         
